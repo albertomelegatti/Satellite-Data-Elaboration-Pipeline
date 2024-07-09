@@ -2,7 +2,7 @@ from sentinelhub import SentinelHubRequest, DataCollection, MimeType, CRS, BBox,
 import sys
 import pyproj
 import os
-from function import getValuesMatrix, getPercentageMatrix, generateImage, compare_dates, compare_coordinates, extractImagesFromTar, jsonBuilder, convert_image_to_4_colors, htmlLeafLetBuilder, tiff2Jpg
+from function import getValuesMatrix, getPercentageMatrix, generateImage, compareDates, compareCoordinates, extractImagesFromTar, jsonBuilder, convertImageTo4Colors, htmlLeafLetBuilder, tiff2Jpg
 import datetime
 
 # Verifica che il numero di argomenti sia corretto
@@ -18,26 +18,26 @@ else:
 
 
 # Verifica che la data di inizio sia precedente alla data di fine
-if compare_dates(sys.argv[7], sys.argv[8]) == 2:
-    print("La data di inizio deve essere precedente alla data di fine")
+if compareDates(sys.argv[7], sys.argv[8]) == 2:
+    print("The start date must be before the end date")
     sys.exit(1)
 
 # Verifica che le coordinate siano corrette
-if compare_coordinates(float(sys.argv[3]), float(sys.argv[4]), float(sys.argv[5]), float(sys.argv[6])) == 1:
-    print("Le coordinate devono essere comprese nei seguenti intervalli: latitudine [-90, 90], longitudine [-180, 180]")
+if compareCoordinates(float(sys.argv[3]), float(sys.argv[4]), float(sys.argv[5]), float(sys.argv[6])) == 1:
+    print("The coordinates must be within the following ranges: latitude [-90, 90], longitude [-180, 180]")
     sys.exit(1)
-elif compare_coordinates(float(sys.argv[3]), float(sys.argv[4]), float(sys.argv[5]), float(sys.argv[6])) == 2:
-    print("Le coordinate devono essere inserite in ordine corretto: NW_Latitude > SE_Latitude, NW_Longitude < SE_Longitude")
+elif compareCoordinates(float(sys.argv[3]), float(sys.argv[4]), float(sys.argv[5]), float(sys.argv[6])) == 2:
+    print("The coordinates must be entered in the correct order: NW_Latitude > SE_Latitude, NW_Longitude < SE_Longitude")
     sys.exit(1)
 
 # Verifica che il prodotto scelto sia tra quelli disponibili
 if sys.argv[10] != "stemp" and sys.argv[10] != "stype" and sys.argv[10] != "gprox" and sys.argv[10] != "vis":
-    print("Prodotto non valido")
+    print("Invalid choice")
     sys.exit(1)
 
 # Verifica che il valore di maxCloudCoverage sia compreso tra 0 e 100
 if float(sys.argv[9]) < 0 or float(sys.argv[9]) > 100:
-    print("Il valore di maxCloudCoverage deve essere compreso tra 0 e 100")
+    print("The value of maxCloudCoverage must be between 0 and 100")
     sys.exit(1)
 
 
@@ -64,7 +64,7 @@ if sys.argv[10] == "gprox":
     
     # Verifica che il raggio sia maggiore di 0
     if metersRadius <= 0:
-        print("Il raggio deve essere maggiore di 0")
+        print("Radius must be greater than 0")
         sys.exit(1)
 
 
@@ -99,15 +99,13 @@ lat2, lon2 = SE_Latitude, SE_Longitude
 verticalSideMeter = wgs84.inv(lon1, lat1, lon1, lat2)[2]
 horizontalSideMeter = wgs84.inv(lon1, lat1, lon2, lat1)[2]
 
-latoLungo = max(verticalSideMeter, horizontalSideMeter)
-latoCorto = min(verticalSideMeter, horizontalSideMeter)
+longSide = max(verticalSideMeter, horizontalSideMeter)
+shortSide = min(verticalSideMeter, horizontalSideMeter)
 
-latoVerticaleInPixel = verticalSideMeter * (750 / latoLungo)
-latoOrizzontaleInPixel = horizontalSideMeter * (750 / latoLungo)
+verticalSidePixel = verticalSideMeter * (750 / longSide)
+horizontalSidePixel = horizontalSideMeter * (750 / longSide)
 
-# La risoluzione serve per il calcolo dell'indice di prossimità di verde
-resolution = verticalSideMeter / latoVerticaleInPixel
-print("Risoluzione:", resolution)
+resolution = longSide / 750
 
 if product == "gprox":
     # Il valore di metri di raggio sono i metri di raggio che l'utente vuole considerare per il calcolo dell'indice di prossimità di verde
@@ -120,14 +118,14 @@ if product == "gprox":
 
 
 # Creazione della cartella "results" in cui verranno salvati tutti gli output
-posizioneAttuale = os.path.dirname(os.path.realpath(__file__))
-nomeCartellaRisultato = "results_" + datetime.datetime.now().strftime("%Y%m%d_%H%M%S") 
-posizioneCartellaRisultato = os.path.join(posizioneAttuale, nomeCartellaRisultato)
+folderPath = os.path.dirname(os.path.realpath(__file__))
+resultFolderName = "results_" + datetime.datetime.now().strftime("%Y%m%d_%H%M%S") 
+resultFolderPath = os.path.join(folderPath, resultFolderName)
 
     
 # Controlla se la cartella esiste già
-if not os.path.exists(posizioneCartellaRisultato):
-    os.makedirs(posizioneCartellaRisultato)
+if not os.path.exists(resultFolderPath):
+    os.makedirs(resultFolderPath)
 
 percentage_matrix = []
 
@@ -319,7 +317,7 @@ function evaluatePixel(samples) {
     )
     request = SentinelHubRequest(
         evalscript = evalscript,
-        data_folder = posizioneCartellaRisultato,  
+        data_folder = resultFolderPath,  
         input_data=[
             SentinelHubRequest.input_data(
                 data_collection=DataCollection.SENTINEL3_SLSTR,
@@ -340,15 +338,15 @@ function evaluatePixel(samples) {
         ],
         bbox=bbox,
         geometry=geometry,
-        size=[latoOrizzontaleInPixel, latoVerticaleInPixel],
+        size=[horizontalSidePixel, verticalSidePixel],
         config=config
     )
-    print("Richiesta inviata")
+    print("Request sent")
     response = request.get_data(save_data=True)
-    print("Richiesta completata")
+    print("Request completed")
 
     # Estrazione delle immagini dal file tar
-    extractImagesFromTar(posizioneCartellaRisultato)
+    extractImagesFromTar(resultFolderPath)
     
 
 
@@ -394,7 +392,7 @@ elif product == 'stype':
     )
     request = SentinelHubRequest(
         evalscript = evalscript,
-        data_folder = posizioneCartellaRisultato,  
+        data_folder = resultFolderPath,  
         input_data=[
             SentinelHubRequest.input_data(
                 data_collection=DataCollection.SENTINEL2_L2A,     
@@ -408,18 +406,18 @@ elif product == 'stype':
         ],
         bbox=bbox,
         geometry=geometry,
-        size=[latoOrizzontaleInPixel, latoVerticaleInPixel],
+        size=[horizontalSidePixel, verticalSidePixel],
         config=config
     )
-    print("Richiesta inviata")
+    print("Request sent")
     response = request.get_data(save_data=True)
-    print("Richiesta completata")
+    print("Request completed")
 
     # Estrazione delle immagini dal file tar
-    extractImagesFromTar(posizioneCartellaRisultato)
+    extractImagesFromTar(resultFolderPath)
     
     # L'immagine jpg scaricata viene convertita in un'immagine a 4 colori
-    convert_image_to_4_colors(os.path.join(posizioneCartellaRisultato, "extracted_contents", "default.jpg"), os.path.join(posizioneCartellaRisultato, "extracted_contents", "convertedDefault.tif"))
+    convertImageTo4Colors(os.path.join(resultFolderPath, "extracted_contents", "default.jpg"), os.path.join(resultFolderPath, "extracted_contents", "convertedDefault.tif"))
     
 
 
@@ -466,7 +464,7 @@ elif product == 'gprox':
     )
     request = SentinelHubRequest(
         evalscript = evalscript,
-        data_folder = posizioneCartellaRisultato,  
+        data_folder = resultFolderPath,  
         input_data=[
             SentinelHubRequest.input_data(
                 data_collection=DataCollection.SENTINEL2_L2A,     
@@ -480,19 +478,19 @@ elif product == 'gprox':
         ],
         bbox=bbox,
         geometry=geometry,
-        size=[latoOrizzontaleInPixel, latoVerticaleInPixel],
+        size=[horizontalSidePixel, verticalSidePixel],
         config=config
     )
-    print("Richiesta inviata")
+    print("Request sent")
     response = request.get_data(save_data=True)
-    print("Richiesta completata")
+    print("Request completed")
 
     # Estrazione delle immagini dal file tar
-    extractImagesFromTar(posizioneCartellaRisultato)
+    extractImagesFromTar(resultFolderPath)
 
     #Esecuzione di uno script per la generazione dell'immagine con le 5 bande colorate
     input_output_paths = [
-        (posizioneCartellaRisultato + "/extracted_contents/default.tif", posizioneCartellaRisultato + "/extracted_contents/result.tiff")
+        (resultFolderPath + "/extracted_contents/default.tif", resultFolderPath + "/extracted_contents/result.tiff")
     ]
 
     for input_path, output_path in input_output_paths:
@@ -505,8 +503,8 @@ elif product == 'gprox':
         generateImage(percentage_matrix, output_path)
         #print("Immagine generata per", output_path)
     
-    os.rename(posizioneCartellaRisultato + "/extracted_contents/default.jpg", posizioneCartellaRisultato + "/extracted_contents/default1.jpg")
-    tiff2Jpg(posizioneCartellaRisultato + "/extracted_contents/result.tiff", posizioneCartellaRisultato + "/extracted_contents/default.jpg")
+    os.rename(resultFolderPath + "/extracted_contents/default.jpg", resultFolderPath + "/extracted_contents/default1.jpg")
+    tiff2Jpg(resultFolderPath + "/extracted_contents/result.tiff", resultFolderPath+ "/extracted_contents/default.jpg")
 
 
 
@@ -583,7 +581,7 @@ elif product == 'vis':
     )
     request = SentinelHubRequest(
         evalscript = evalscript,
-        data_folder = posizioneCartellaRisultato,  
+        data_folder = resultFolderPath,  
         input_data=[
             SentinelHubRequest.input_data(
                 data_collection=DataCollection.SENTINEL2_L1C,     
@@ -597,30 +595,30 @@ elif product == 'vis':
         ],
         bbox=bbox,
         geometry=geometry,
-        size=[latoOrizzontaleInPixel, latoVerticaleInPixel],
+        size=[horizontalSidePixel, verticalSidePixel],
         config=config
     )
-    print("Richiesta inviata")
+    print("Request sent")
     response = request.get_data(save_data=True)
-    print("Richiesta completata")
+    print("Request completed")
 
     # Estrazione delle immagini dal file tar
-    extractImagesFromTar(posizioneCartellaRisultato)
+    extractImagesFromTar(resultFolderPath)
 
 else:
-    print("Scelta non valida")
+    print("Invalid choice")
     sys.exit(1)
 
 # In tutti i casi tranne vis, vengono scritti i dati nel file json e creata la pagina html con Leaflet
 if product == "gprox":
     datiDaScriverenelJson = [NW_Latitude, NW_Longitude, SE_Latitude, SE_Longitude, timeIntervalStart, timeIntervalEnd, resolution, maxCloudCoverage, metersRadius, product]
-    jsonBuilder(datiDaScriverenelJson, percentage_matrix, posizioneCartellaRisultato)
+    jsonBuilder(datiDaScriverenelJson, percentage_matrix, resultFolderPath)
 
-if product == "stype" or product == "stemp":
+if product == "stype":
     datiDaScriverenelJson = [NW_Latitude, NW_Longitude, SE_Latitude, SE_Longitude, timeIntervalStart, timeIntervalEnd, resolution, maxCloudCoverage, product]
-    jsonBuilder(datiDaScriverenelJson, percentage_matrix, posizioneCartellaRisultato)
+    jsonBuilder(datiDaScriverenelJson, percentage_matrix, resultFolderPath)
     
 if htmlFlag == "true":
-    htmlLeafLetBuilder(NW_Longitude, NW_Latitude, SE_Longitude, SE_Latitude, posizioneCartellaRisultato)
+    htmlLeafLetBuilder(NW_Longitude, NW_Latitude, SE_Longitude, SE_Latitude, resultFolderPath)
 
 
