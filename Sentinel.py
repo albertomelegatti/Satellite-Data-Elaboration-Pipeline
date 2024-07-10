@@ -102,16 +102,20 @@ horizontalSideMeter = wgs84.inv(lon1, lat1, lon2, lat1)[2]
 longSide = max(verticalSideMeter, horizontalSideMeter)
 shortSide = min(verticalSideMeter, horizontalSideMeter)
 
+
+# Viene assegnato al lato lungo dell'area un valore di 750 pixel, il lato corto si adegua per mantenere le proporzioni
+# Modificando il valore 750 si può modificare la risoluzione dell'immagine
+# Nel caso di gprox e aree piccole è consigliabile inserire un valore più basso per evitare lunghe attese
 verticalSidePixel = verticalSideMeter * (750 / longSide)
 horizontalSidePixel = horizontalSideMeter * (750 / longSide)
 
+# Calcolo della risoluzione
 resolution = longSide / 750
 
 if product == "gprox":
     # Il valore di metri di raggio sono i metri di raggio che l'utente vuole considerare per il calcolo dell'indice di prossimità di verde
     # Dividendo i metri di raggio per la risoluzione si ottiene il raggio in pixel, che verrà utilizzato per il calcolo dell'indice di prossimità di verde
     vegetationIndexRadius = (float(metersRadius) / resolution)
-    vegetationIndexRadius = (metersRadius / resolution)
 
     # Arrotondamento del raggio per l'indice di prossimità di verde
     vegetationIndexRadius = round(vegetationIndexRadius)
@@ -488,20 +492,15 @@ elif product == 'gprox':
     # Estrazione delle immagini dal file tar
     extractImagesFromTar(resultFolderPath)
 
-    #Esecuzione di uno script per la generazione dell'immagine con le 5 bande colorate
-    input_output_paths = [
-        (resultFolderPath + "/extracted_contents/default.tif", resultFolderPath + "/extracted_contents/result.tiff")
-    ]
+    inputPath = resultFolderPath + "/extracted_contents/default.tif"
+    outputPath = resultFolderPath + "/extracted_contents/result.tiff"
 
-    for input_path, output_path in input_output_paths:
-        value_matrix = getValuesMatrix(input_path)
-        #print("Matrice dei valori creata per", input_path)
+
+    value_matrix = getValuesMatrix(inputPath)
             
-        percentage_matrix = getPercentageMatrix(value_matrix, vegetationIndexRadius)
-        #print("Matrice delle percentuali creata per", input_path)
+    percentage_matrix = getPercentageMatrix(value_matrix, vegetationIndexRadius)
             
-        generateImage(percentage_matrix, output_path)
-        #print("Immagine generata per", output_path)
+    generateImage(percentage_matrix, outputPath)
     
     os.rename(resultFolderPath + "/extracted_contents/default.jpg", resultFolderPath + "/extracted_contents/default1.jpg")
     tiff2Jpg(resultFolderPath + "/extracted_contents/result.tiff", resultFolderPath+ "/extracted_contents/default.jpg")
@@ -611,12 +610,12 @@ else:
 
 # In tutti i casi tranne vis, vengono scritti i dati nel file json e creata la pagina html con Leaflet
 if product == "gprox":
-    datiDaScriverenelJson = [NW_Latitude, NW_Longitude, SE_Latitude, SE_Longitude, timeIntervalStart, timeIntervalEnd, resolution, maxCloudCoverage, metersRadius, product]
-    jsonBuilder(datiDaScriverenelJson, percentage_matrix, resultFolderPath)
+    dataToWriteInJson = [NW_Latitude, NW_Longitude, SE_Latitude, SE_Longitude, timeIntervalStart, timeIntervalEnd, resolution, maxCloudCoverage, metersRadius, product]
+    jsonBuilder(dataToWriteInJson, percentage_matrix, resultFolderPath)
 
 if product == "stype":
-    datiDaScriverenelJson = [NW_Latitude, NW_Longitude, SE_Latitude, SE_Longitude, timeIntervalStart, timeIntervalEnd, resolution, maxCloudCoverage, product]
-    jsonBuilder(datiDaScriverenelJson, percentage_matrix, resultFolderPath)
+    dataToWriteInJson = [NW_Latitude, NW_Longitude, SE_Latitude, SE_Longitude, timeIntervalStart, timeIntervalEnd, resolution, maxCloudCoverage, product]
+    jsonBuilder(dataToWriteInJson, percentage_matrix, resultFolderPath)
     
 if htmlFlag == "true":
     htmlLeafLetBuilder(NW_Longitude, NW_Latitude, SE_Longitude, SE_Latitude, resultFolderPath)

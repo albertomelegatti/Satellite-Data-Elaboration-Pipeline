@@ -104,7 +104,7 @@ def generateImage(matrix, outputPath):
 
 # Funzione per confrontare due date in formato stringa
 def compareDates(date_str1, date_str2):
-    # Convert the string dates to datetime.date objects
+    # Conversione delle date da stringa a oggetti datetime
     date1 = datetime.datetime.strptime(date_str1, '%Y-%m-%d').date()
     date2 = datetime.datetime.strptime(date_str2, '%Y-%m-%d').date()
     
@@ -120,10 +120,10 @@ def compareDates(date_str1, date_str2):
 
 # Funzione per confrontare la correttezza delle coordinate   
 def compareCoordinates(lat1, lon1, lat2, lon2):
-    # Check if the coordinates are within the valid range
+    # Controllo valori coordinate
     if lat1 < -90 or lat1 > 90 or lon1 < -180 or lon1 > 180 or lat2 < -90 or lat2 > 90 or lon2 < -180 or lon2 > 180:
         return 1
-    # Check if the coordinates are in the correct order
+    # Controllo dell'ordine delle coordinate
     if lat1 < lat2 or lon1 > lon2:
         return 2
     return 0
@@ -279,7 +279,7 @@ def jsonBuilder(dataToWrite, percentageMtrix, inputPath):
     with open(outputPath, 'w') as json_file:
         json.dump(data, json_file, indent=4)
 
-# Funzione per convertire un'immagine in 4 colori
+# Funzione per convertire un'immagine in 4 colori ed eliminare i colori intermedi
 def convertImageTo4Colors(inputPath, outputPath):
 
     print("Image Conversion...")
@@ -357,7 +357,7 @@ def map_color_to_temperature(hex_color):
 '''
 
 # Funzione per calcolare il punto medio tra due coordinate
-def midpoint(longitudeNW, latitudeNW, longitudeSE, latitudeSE):
+def midPoint(longitudeNW, latitudeNW, longitudeSE, latitudeSE):
     return (latitudeNW + latitudeSE) / 2, (longitudeNW + longitudeSE) / 2
 
 # Funzione per convertire un'immagine TIFF in formato JPG
@@ -375,7 +375,7 @@ def tiff2Jpg(inputPath, outputPath):
 # Funzione per creare un file HTML per visualizzare un'immagine su Leaflet
 def htmlLeafLetBuilder(longitudeNW, latitudeNW, longitudeSE, latitudeSE, outputFolder):
     print("Creating HTML file...")
-    midpoint_lat, midpoint_lon = midpoint(longitudeNW, latitudeNW, longitudeSE, latitudeSE)
+    midpoint_lat, midpoint_lon = midPoint(longitudeNW, latitudeNW, longitudeSE, latitudeSE)
     currentDir = outputFolder
     output_path = os.path.join(currentDir, "map.html")
     imagePath = os.path.join(currentDir, "extracted_contents", "default.jpg").replace("\\", "/")
@@ -463,5 +463,6 @@ def htmlLeafLetBuilder(longitudeNW, latitudeNW, longitudeSE, latitudeSE, outputF
     </html>
     '''
 
+    # Scrivi il codice HTML nel file
     with open(output_path, 'w') as html_file:
         html_file.write(htmlCode)
