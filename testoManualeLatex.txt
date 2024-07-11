@@ -1,0 +1,183 @@
+\documentclass{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage[margin = 2.5cm]{geometry}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{setspace}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{float}
+\usepackage{enumitem}
+\usepackage{hyperref}
+
+\title{Pipeline per l'elaborazione di dati satellitari}
+\author{Alberto Melegatti}
+\date{July 2024}
+
+\graphicspath{ {"images"/} }
+\definecolor{rosso}{rgb}{1, 0, 0}
+\definecolor{arancione}{rgb}{1, 0.5, 0}
+\definecolor{giallo}{rgb}{1, 1, 0}
+\definecolor{verdeChiaro}{rgb}{0.5, 1, 0}
+\definecolor{verde}{rgb}{0, 1, 0}
+
+\begin{document}
+
+\maketitle
+
+\vspace{3pt}
+\large
+\section{Introduzione}
+L'uso delle immagini satellitari è fondamentale in molti campi, come l'agricoltura, il monitoraggio ambientale e la gestione delle risorse naturali. Sentinel Hub, con la sua API, offre un accesso rapido e semplice ai dati satellitari delle missioni Sentinel del programma Copernicus dell'ESA.\\\\
+In questa relazione, viene presentato un progetto in Python che utilizza l'API di Sentinel Hub per scaricare e analizzare le immagini satellitari. Verrà descritto il codice e le sue principali funzionalità.
+\newpage
+\section{Installazione ambiente python e librerie}
+\subsection{Python}
+Nella scrittura del programma è stato utilizzato il linguaggio Python nella versione 3.11.9.\\
+Procedura per l'installazione:
+\begin{enumerate}[itemsep=0.3pt]
+    \item Scaricare Python dal \href{https://www.python.org/downloads/}{\textit{sito ufficiale}}
+    \item Individuare il file di installazione scaricato (di solito si trova nella cartella \textbf{Download}) e fare doppio clic su di esso per avviare il processo di installazione
+    \item Nella schermata di benvenuto del programma di installazione, verranno mostrate due opzioni: \textbf{Install Now} e \textbf{Customize Installation}. Se si vuole installare Python con le impostazioni predefinite, fare clic semplicemente su \textbf{Install Now}. Se si vuole personalizzare l'installazione, fare clic su \textbf{Customize installation}.
+    \item Dopo aver selezionato le impostazioni di installazione desiderate, fare clic su \textbf{Install} per iniziare il processo di installazione. Il programma di installazione copierà i file necessari sul vostro computer e configurerà Python. Questo processo potrebbe richiedere alcuni minuti
+    \item Una volta completata l'installazione, sarà possibile verificare che Python sia stato installato correttamente aprendo il Prompt dei comandi (cercare "cmd" nel menù \textbf{Start}) e digitare il seguente comando:
+    \begin{verbatim}
+        python --version
+    \end{verbatim}
+    Premete \textbf{Invio} e apparirà nell'output la versione di Python che è stata installata. Questo conferma che Python è stato installato correttamente sul vostro computer.
+\end{enumerate}
+\subsection{Librerie}
+Il codice utilizza diverse librerie che devono essere installate prima dell'avvio del programma.\\
+Le librerie sono le seguenti:
+\begin{itemize}[itemsep=0pt, topsep=3pt]
+    \item sentinelhub
+    \item pyproj
+    \item opencv
+    \item pillow
+    \item numpy
+\end{itemize}
+Possono essere installate tutte insieme con il seguente comando:
+\begin{verbatim}
+    pip install sentinelhub pyproj opencv-python numpy
+\end{verbatim}
+\subsection{Esecuzione del programma}
+Aprire la cartella in cui sono stati salvati i file \textit{Sentinel.py} e \textit{function.py}.\\
+Cliccare con il tasto destro del mouse in un punto qualsiasi della cartella e selezionare \textbf{Apri nel terminale}. Una volta aperto il terminale è possibile eseguire il programma.\\
+Per lanciare il comando scrivere:
+\begin{verbatim}
+    python Sentinel.py <client_id> <client_secret> <NW Latitude> <NW Longitude> 
+    <SE Latitude> <SE Longitude> <timeIntervalStart> <timeIntervalEnd> 
+    <maxCloudCoverage> <product> (<metersRadius>) (<html>)
+\end{verbatim}
+inserendo gli opportuni valori. Per informazioni sui parametri fare riferimento al capitolo seguente.\\\\
+All'interno della cartella corrente verrà creata una nuova cartella denominata \textit{result\_} + \textit{data e ora attuali}.\\
+Ad esempio, se il comando viene lanciato alle 12:00:00 del 1 luglio 2024, la cartella si chiamerà \textit{result\_20240701\_120000}. All'interno di questa cartella, al termine dell'esecuzione del programma, troverete diversi file e cartelle:
+\begin{itemize}[itemsep=0pt, topsep=3pt]
+    \item Una cartella scaricata direttamente dal programma, contenente un file \texttt{tar} con le immagini vere e proprie e un file \texttt{json} riassuntivo della richiesta effettuata. Il nome di questa cartella varia di volta in volta.
+    \item Una cartella \textit{extracted\_contents} che contiene le immagini estratte dal file \texttt{tar} scaricato in precedenza e, nel caso in cui il prodotto sia \textit{gprox}, anche l'immagine risultato.
+    \item Un file \texttt{html} \textit{map.html} nel quale le immagini scaricate vengono sovrapposte in trasparenza alla mappa reale (solo nel caso in cui l'opzione HTML sia stata selezionata).
+    \item Un file \texttt{json} \textit{result.json} contenente tutte le informazioni sui prodotti scaricati.
+\end{itemize}
+\newpage
+\section{Utilizzo della riga di comando}
+Il codice funziona da linea di comando e riceve in input i seguenti parametri, i quali devono essere inseriti nel seguente ordine:
+\begin{itemize}[itemsep=0pt, topsep=3pt]
+    \item Client ID (vedi \textit{\hyperref[sec:Capitolo 4]{capitolo 4}})
+    \item Client Secret (vedi \textit{\hyperref[sec:Capitolo 4]{capitolo 4}})
+    \item Latitudine vertice Nord-Ovest (NO)
+    \item Longitudine vertice Nord-Ovest (NO)
+    \item Latitudine vertice Sud-Est (SE)
+    \item Longitudine vertice Sud-Est (SE)
+    \item Data di inizio dell'intervallo temporale (yyyy-mm-dd)
+    \item Data di fine dell'intervallo temporale (yyyy-mm-dd)
+    \item Massima copertura nuvolosa accettabile
+    \item Scelta del prodotto da scaricare (\textit{stemp}, \textit{stype}, \textit{gprox}, \textit{vis}) (vedi\textit{\hyperref[sec:Capitolo 5]{capitolo 5}})
+    \item Metri di raggio per indice di verde di prossimità (solo per \textit{gprox})
+    \item Opzione per creare una pagina html con leaflet con le immagini scaricate (opzionale)\\
+\end{itemize}
+All'avvio del programma viene verificata la validità dei valori:
+\begin{itemize}[itemsep=0pt, topsep=3pt]
+    \item Il prodotto deve essere uno dei quattro illustrati in precedenza
+    \item Il valore di max cloud coverage deve essere compreso fra 0 e 100
+    \item La latitudine del vertice NO deve essere maggiore della latitudine del vertice SE
+    \item La longitudine del vertice NO deve essere minore della longitudine del vertice SE
+    \item I valori di latitudine devono rientrare nel range [-90, 90]
+    \item I valori di longitudine devono rientrare nel range [-180, 180]
+    \item La data di partenza dell'intervallo temporale deve precedere il valore della data finale\\
+\end{itemize}
+Dato un intervallo temporale, nel caso in cui il prodotto selezionato sia \textit{stemp}, l'immagine di output rappresenta una media di tutto l'intervallo temporale. In tutti gli altri casi vengono scaricati i dati relativi alla prima giornata valida all'interno del range temporale inserito dall'utente. Per giornata valida si intende quella per cui vale la massima copertura nuvolosa impostata come parametro dopo il range temporale.\\
+La massima copertura nuvolosa accettabile è un valore percentuale che rappresenta il limite superiore alla copertura nuvolosa dell'area. Tuttavia, questo valore non si riferisce esclusivamente all'area selezionata dall'utente, ma ad una macroarea più grande. Di conseguenza, potrebbe succedere che, nonostante venga impostato un valore basso, l'immagine di output risulti comunque coperta da nuvole.\\
+Nel caso in cui nessuna immagine all'interno del range temporale inserito soddisfi i requisiti di copertura nuvolosa massima, allora verrà scaricata un'immagine completamente bianca.\\\\
+Nel caso in cui il prodotto selezionato sia \textit{gprox} è necessario inserire come parametro anche il raggio in metri dell'area per cui si vuole calcolare l'indice di prossimità.\\
+L'ultimo parametro è opzionale e riguarda la possibilità di creare una pagina html che riporti l'immagine scaricata sovrapposta ad una mappa reale. Per attivare questa funzione, l'ultimo parametro deve essere "html".
+\newpage
+\section{Registrazione su Sentinel Hub}
+\label{sec:Capitolo 4}
+Per prima cosa è necessario registrarsi sul sito di Sentinel Hub.\\
+Collegarsi al
+\href{https://services.sentinel-hub.com/auth/realms/main/protocol/openid-connect/auth?client_id=30cf1d69-af7e-4f3a-997d-0643d660a478&redirect_uri=https%3A%2F%2Fapps.sentinel-hub.com%2Fdashboard%2F&state=26d82dfc-e268-4f19-8fd7-7751379829bb&response_mode=fragment&response_type=code&scope=openid&nonce=c0a3ce6f-7eaa-494e-b602-c747efc87efe&code_challenge=CWWdYAaMmzwctPHcYRtZioGkEoRut_Kefues1AbJob4&code_challenge_method=S256}{\textit{seguente link}} ed effettuare la registrazione sul sito.\\\\
+A questo punto siamo pronti per aggiungere al nostro account un client OAuth.\\
+Per registrare un client OAuth, aprire la scheda "Impostazioni utente" nell'app Dashboard, individuare la sezione "Client OAuth" e cliccare sul pulsante \textit{Create} (1).\\
+Fornire un nome per il client OAuth (2). Puoi selezionare la data di scadenza per il tuo client (3) o selezionare "non scadere mai" se desideri che il tuo client OAuth sia indefinito (4).\\
+Per i client OAuth senza scadenza, dovrai confermare la tua comprensione dei rischi (5). Se il tuo client OAuth verrà utilizzato da un'applicazione a pagina singola (SPA), selezionare l'opzione corrispondente (6). Se è selezionata l'opzione SPA, verrà richiesto di scegliere tra "Consenti tutti i domini" (7) o specificare le origini web (8) da cui verrà utilizzato il client OAuth.\\
+È richiesta la conferma se hai selezionato di utilizzare il client OAuth in un'applicazione frontend, riconoscendo i rischi di esposizione (9).
+Una volta compilati tutti i campi obbligatori, procedere cliccando su \textit{Create} (10).
+\begin{figure}[h]
+    \centering
+    \includegraphics[height = 10.00cm, keepaspectratio]{"create_oauth_client.png"}
+\end{figure} 
+Verranno visualizzati il tuo client ID e il tuo secret client. Assicurati di copiare il valore del client secret, incollarlo in un file di testo e custodirlo con cura, poiché non sarà recuperabile una volta che il pop-up si sarà chiuso!\\
+Dopo aver copiato, fare clic su \textit{Close} (12). Con il client ID e il client secret in mano, ora sei pronto per poterli utilizzare.\\\\
+Una volta completato, troverai il tuo client OAuth appena creato con il suo ID e nome corrispondenti (13) elencati nella sezione "Client OAuth".\\
+Il numero di client OAuth è limitato al piano che stai utilizzando. Nella scheda \textit{Impostazioni utente} all'interno della sezione "Client OAuth" sarai in grado di visualizzare quanti client OAuth ti sono rimasti.\\\\
+Nel caso in cui tu abbia raggiunto il tuo limite, verrà mostrata una notifica nella sezione "Client OAuth".\\
+Ora hai due opzioni: 
+\begin{itemize}[itemsep=0pt, topsep=5pt]
+    \item Eliminare un client OAuth esistente per crearne uno nuovo
+    \item Effettuare l'upgrade del tuo account cliccando su \textit{Upgrade your account}\\\\
+\end{itemize}
+Una volta scaduto un client OAuth, viene spostato in un elenco di client inattivi. Allo stesso modo, i client eliminati appariranno anche in questo elenco come client inattivi.
+\newpage
+\section{Spiegazione dei prodotti}
+\label{sec:Capitolo 5}
+\subsection{stemp}
+La \textbf{stemp} è un indicatore della temperatura del suolo terrestre.\\
+Viene calcolata combinando i dati provenienti da due dataset del satellite Sentinel-3.\\
+Nelle immagini generate le zone più scure rappresentano le aree più fredde e coincidono con le montagne, i fiumi e i laghi. Le zone più chiare invece, rappresentano le aree più calde.\\
+Lo script non contiene alcun rilevamento di nuvole: utilizzare il prodotto \textit{vis} per controllare le nuvole. Le nuvole appariranno come pixel più freddi (più scuri) nell'immagine.\\
+La risoluzione di questo prodotto è di 1000 metri, per cui è consigliabile selezionare un'area di interesse estesa per ottenere un risultato significativo.\\\\
+Satellite: \textbf{Sentinel-3}.\\
+Comando da linea di comando: \textbf{\textit{stemp}}.
+\subsection{stype}
+Il prodotto \textbf{stype} è una mappa tematica che divide l'area di interesse in base alla copertura del suolo. I tipi di suolo riconosciuti sono quattro:
+\begin{itemize}[itemsep=0pt, topsep=5pt]
+    \item Edifici (bianco)
+    \item Vegetazione (verde)
+    \item Suolo sterile (rosso)
+    \item Acqua (blu)
+\end{itemize}
+La risoluzione di questo prodotto è di 10 metri, per cui è consigliabile selezionare un'area di interesse medio-piccola.\\\\
+Satellite: \textbf{Sentinel-2 L2A}.\\
+Comando da linea di comando: \textbf{\textit{stype}}.
+\subsection{gprox}
+Questo prodotto calcola la percentuale di aree verdi o acqua intorno a ciascun punto dell'area selezionata. Ciascun punto viene classificato in cinque categorie a seconda della percentuale di aree verdi o acqua che lo circondano. A ciascuna categoria viene poi assegnato un colore:
+\begin{itemize}
+    \item 0 - 20\% \tikz\draw[fill=rosso, draw=black] (0,0) rectangle (0.5,0.3);
+    \item 21 - 40\% \tikz\draw[fill=arancione, draw=black] (0,0) rectangle (0.5,0.3);
+    \item 41 - 60\% \tikz\draw[fill=giallo, draw=black] (0,0) rectangle (0.5,0.3);
+    \item 61 - 80\% \tikz\draw[fill=verdeChiaro, draw=black] (0,0) rectangle (0.5,0.3);
+    \item 81 - 100\% \tikz\draw[fill=verde, draw=black] (0,0) rectangle (0.5,0.3);
+\end{itemize}
+L'algoritmo funziona in questo modo:\\
+Viene scaricata un'immagine \textit{soil type}, nella quale vengono colorate di bianco le aree contenenti edifici e suolo sterile e in verde le aree con vegetazione e acqua.\\
+A partire da questa immagine a due colori (bianco e verde) viene creata una matrice delle stesse dimensioni dell'immagine scaricata, avente il valore 0 per i pixel bianchi e 1 per i pixel verdi.\\
+A partire dal raggio in metri inserito dall'utente viene calcolato il raggio corrispondente in pixel all'interno dell'immagine, il quale verrà poi utilizzato nel calcolo vero e proprio.\\
+Ora inizia la fase di elaborazione: a partire dalla matrice creata in precedenza, viene creata una seconda matrice che conterrà un valore percentuale per ogni pixel. In seguito, la matrice dei valori verrà letta e convertita in immagine.\\\\
+La fase del calcolo delle percentuali è computazionalmente molto dispendiosa, per cui se viene inserito un valore di raggio troppo grande ( $>$ 120 metri) si dovrà attendere un consistente lasso di tempo.\\\\
+Comando da linea di comando: \textbf{\textit{gprox}}.
+\subsection{vis}
+Il prodotto \textbf{vis} è un'immagine a colori reali dell'area selezionata.\\
+La risoluzione è di 10 metri.\\\\
+Satellite: \textbf{Sentinel-2 L1C}.\\
+Comando da linea di comando: \textbf{\textit{vis}}.
+\end{document}
